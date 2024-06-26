@@ -1,0 +1,216 @@
+---
+title: "homework4"
+author: "Nishad Waghmare"
+format: html
+editor: visual
+---
+
+# Task 1: Conceptual Questions
+
+1. **What is the purpose of the lapply() function? What is the equivalent purrr function?**
+
+The `lapply()` function in R is used to apply a function to each element of a list or vector and return a list of the same length as the input. The equivalent function in the `purrr` package is `map()`.
+
+2. **Suppose we have a list called `my_list`. Each element of the list is a numeric data frame (all columns are numeric). We want to use `lapply()` to run the code `cor(numeric_matrix, method = "kendall")` on each element of the list. Write code to do this below!**
+
+```{r}
+lapply(my_list, cor, method = "kendall")
+```
+
+3. **What are two advantages of using purrr functions instead of the Base R apply family?**
+
+  - purrr functions are more consistent in their syntax and more flexible with their input and output types.
+  - purrr functions work seamlessly with the tidyverse, making data manipulation and analysis more intuitive and efficient.
+
+4. **What is a side-effect function?**
+
+A side-effect function is a function that performs actions other than returning a value, such as modifying global variables, printing to the console, writing to a file, or plotting.
+
+5. **Why can you name a variable sd in a function and not cause any issues with the sd function?**
+
+Within the scope of a function, variables are local to that function. Naming a variable sd inside a function does not affect the global sd function because the local variable sd is only accessible within the function's scope.
+
+
+#### Task 2: Writing R Functions
+
+1. **Define the RMSE Function**
+
+We start by defining a function called getRMSE() that calculates the Root Mean Square Error (RMSE) between a vector of observed values and a vector of predicted values. This function includes an optional argument to handle missing values using the mean() function.
+
+```{r}
+   getRMSE <- function(observed, predicted, ...) {
+     sqrt(mean((observed - predicted)^2, ...))
+   }
+```
+
+2. **Test the RMSE Function**
+
+Next, we test the getRMSE() function by generating some sample response and predictor values. We use the set.seed() function to ensure reproducibility. After calculating the RMSE with the complete data, we introduce missing values and test the function's ability to handle these missing values by using the na.rm = TRUE argument.
+
+```{r}
+set.seed(10)
+n <- 100
+x <- runif(n)
+resp <- 3 + 10*x + rnorm(n)
+pred <- predict(lm(resp ~ x), data.frame(x))
+
+# Test RMSE function
+getRMSE(resp, pred)
+
+# Introduce NA values
+resp_with_na <- resp
+resp_with_na[c(10, 20)] <- NA_real_
+
+# Test RMSE function with NA handling
+getRMSE(resp_with_na, pred, na.rm = TRUE)
+
+```
+
+3. **Define the MAE function**
+
+We define a function called getMAE() to calculate the Mean Absolute Error (MAE) between observed and predicted values. This function, similar to the RMSE function, includes an optional argument to handle missing values.
+
+```{r}
+getMAE <- function(observed, predicted, ...) {
+  mean(abs(observed - predicted), ...)
+}
+```
+
+4. **Test the MAE function**
+
+We test the getMAE() function with the same sample data used for the RMSE function. We also introduce missing values in the response vector and test the function's ability to handle these missing values.
+
+```{r}
+set.seed(10)
+n <- 100
+x <- runif(n)
+resp <- 3 + 10*x + rnorm(n)
+pred <- predict(lm(resp ~ x), data.frame(x))
+
+# Test MAE function
+getMAE(resp, pred)
+
+# Introduce NA values
+resp_with_na <- resp
+resp_with_na[c(10, 20)] <- NA_real_
+
+# Test MAE function with NA handling
+getMAE(resp_with_na, pred, na.rm = TRUE)
+
+```
+
+5. **Create a Wrapper Function**
+
+We create a wrapper function called getMetrics() that can calculate both RMSE and MAE, or either metric individually. This function checks if the input vectors are numeric and atomic, handles missing values, and calls the getRMSE() and getMAE() functions as helper functions. The function returns the requested metrics with appropriate names.
+
+```{r}
+getMetrics <- function(observed, predicted, metrics = c("RMSE", "MAE"), ...) {
+  if (!is.vector(observed) || !is.vector(predicted) || !is.atomic(observed) || !is.atomic(predicted) || !is.numeric(observed) || !is.numeric(predicted)) {
+    stop("Both observed and predicted should be numeric vectors.")
+  }
+  
+  results <- list()
+  
+  if ("RMSE" %in% metrics) {
+    results$RMSE <- getRMSE(observed, predicted, ...)
+  }
+  
+  if ("MAE" %in% metrics) {
+    results$MAE <- getMAE(observed, predicted, ...)
+  }
+  
+  return(results)
+}
+
+```
+
+6. **Test the Wrapper Function**
+
+We test the getMetrics() function using the same sample data and introduce missing values in the response vector. We call the function to calculate each metric individually and both metrics together. Additionally, we test the function's error handling by passing incorrect data types.
+
+```{r}
+set.seed(10)
+n <- 100
+x <- runif(n)
+resp <- 3 + 10*x + rnorm(n)
+pred <- predict(lm(resp ~ x), data.frame(x))
+
+# Test wrapper function
+getMetrics(resp, pred)
+getMetrics(resp, pred, metrics = "RMSE")
+getMetrics(resp, pred, metrics = "MAE")
+
+# Introduce NA values
+resp_with_na <- resp
+resp_with_na[c(10, 20)] <- NA_real_
+
+# Test wrapper function with NA handling
+getMetrics(resp_with_na, pred, na.rm = TRUE)
+getMetrics(resp_with_na, pred, metrics = "RMSE", na.rm = TRUE)
+getMetrics(resp_with_na, pred, metrics = "MAE", na.rm = TRUE)
+
+# Test wrapper function with incorrect data
+getMetrics(data.frame(resp), pred)  # Should stop with an error message
+
+```
+
+#### Task 3: Querying an API and a Tidy-Style Function
+
+1. **Install and Load Required Packages**
+
+To begin, we need to ensure that we have the necessary R packages installed and loaded. Specifically, we need the httr package to handle the HTTP requests to the News API and the jsonlite package to parse the JSON responses. The following code installs these packages if they are not already installed and then loads them into the R session.
+
+```{r}
+install.packages("httr")
+install.packages("jsonlite")
+
+library(httr)
+library(jsonlite)
+
+```
+
+2. Define the API Query Function
+
+Next, we define a function called queryNewsAPI which will take three arguments: a search query string, a starting date, and an API key. This function constructs a request URL with the provided parameters, sends a GET request to the News API, and processes the response. If the request is successful, the function parses the JSON content and converts it into a data frame for easy analysis.
+
+```{r}
+queryNewsAPI <- function(query, from_date, api_key) {
+  base_url <- "https://newsapi.org/v2/everything"
+  response <- GET(base_url, query = list(
+    q = query,
+    from = from_date,
+    sortBy = "publishedAt",
+    apiKey = api_key
+  ))
+  
+  if (status_code(response) != 200) {
+    stop("Failed to fetch data from the API.")
+  }
+  
+  content <- content(response, as = "parsed", type = "application/json")
+  articles <- content$articles
+  articles_df <- fromJSON(toJSON(articles))
+  
+  return(articles_df)
+}
+
+```
+
+3. **Use the Function**
+
+We then test the queryNewsAPI function by querying the News API for articles related to 'R programming' from a specified date. We replace the placeholder with an actual API key and print the resulting data frame of articles. We also perform a second query with a different topic to ensure the function works for various queries.
+
+```{r}
+# API key
+api_key <- "cc9fa380d0cd4bc780aa42dbaff840fa"
+
+# Query the API
+articles <- queryNewsAPI("R programming", "2024-06-01", api_key)
+#print(articles)
+
+# Query the API with a different topic
+articles2 <- queryNewsAPI("Machine learning", "2024-06-01", api_key)
+print(articles2)
+
+```
+
