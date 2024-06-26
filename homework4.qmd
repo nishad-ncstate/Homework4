@@ -14,7 +14,7 @@ The `lapply()` function in R is used to apply a function to each element of a li
 2. **Suppose we have a list called `my_list`. Each element of the list is a numeric data frame (all columns are numeric). We want to use `lapply()` to run the code `cor(numeric_matrix, method = "kendall")` on each element of the list. Write code to do this below!**
 
 ```{r}
-lapply(my_list, cor, method = "kendall")
+#lapply(my_list, cor, method = "kendall")
 ```
 
 3. **What are two advantages of using purrr functions instead of the Base R apply family?**
@@ -150,7 +150,7 @@ getMetrics(resp_with_na, pred, metrics = "RMSE", na.rm = TRUE)
 getMetrics(resp_with_na, pred, metrics = "MAE", na.rm = TRUE)
 
 # Test wrapper function with incorrect data
-getMetrics(data.frame(resp), pred)  # Should stop with an error message
+#getMetrics(data.frame(resp), pred)  # Should stop with an error message
 
 ```
 
